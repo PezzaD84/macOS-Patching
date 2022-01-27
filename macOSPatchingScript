@@ -27,7 +27,7 @@ processor=$(uname -m)
 M1softwareupdate(){
 	user=APIUSER
 	passwd=APIPASSWORD
-	serial=$(ioreg -l | grep IOPlatformSerialNumber | tr -d '"','=','|' | sed -e 's#IOPlatformSerialNumber##' | xargs)
+	serial=$(system_profiler SPHardwareDataType | awk '/Serial Number/{print $4}')
 	ID=$(curl -u $user:$passwd -X GET "https://YOUR.JAMFSERVER.COM/JSSResource/computers/serialnumber/$serial" | tr '<' '\n' | grep -m 1 id | tr -d 'id>')
 	curl -u $user:$passwd -X POST "https://YOUR.JAMFSERVER.COM/JSSResource/computercommands/command/ScheduleOSUpdate/action/InstallForceRestart/id/$ID"
 }
