@@ -134,7 +134,7 @@ message=$("$Notify" \
 
 This update will require a reboot so please save any work you have open to prevent any loss of data.
 
-Please click 'Install now' to run the update or leave this window open to automatically install after 5hours. If you click 'Postpone' the update will be scheduled to try again later.
+Please click 'Install now' to run the updates. If you click 'Postpone' the update will be scheduled to try again later.
 
 If you require any assistance - please don’t hesitate to raise an IT support ticket.
 
