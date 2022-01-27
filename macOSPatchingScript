@@ -1,0 +1,214 @@
+#!/bin/bash
+#
+# Created by Perry Driscoll 19/1/2022
+#
+# Script to automatically install macOS updates
+#
+#################################################################
+
+# Variables
+
+Notify=/Library/Application\ Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper
+
+bat=$(pmset -g batt | grep 'InternalBattery' | awk '{print $3}' | tr -d '%'';')
+
+freeSpace=$(df -h -m | grep 'disk1s1' | awk '{print $4}')
+
+log=/Library/Logs/macOSPatchingscript.log
+
+FirstCheck=$(cat $log | awk '{print $8}')
+
+LastDay=$(date -j -f %y%m%d -v+4d $FirstCheck +%y%m%d)
+
+today=$(date +%y%m%d)
+
+processor=$(uname -m)
+
+M1softwareupdate(){
+	user=APIUSER
+	passwd=APIPASSWORD
+	serial=$(ioreg -l | grep IOPlatformSerialNumber | tr -d '"','=','|' | sed -e 's#IOPlatformSerialNumber##' | xargs)
+	ID=$(curl -u $user:$passwd -X GET "https://YOUR.JAMFSERVER.COM/JSSResource/computers/serialnumber/$serial" | tr '<' '\n' | grep -m 1 id | tr -d 'id>')
+	curl -u $user:$passwd -X POST "https://YOUR.JAMFSERVER.COM/JSSResource/computercommands/command/ScheduleOSUpdate/action/InstallForceRestart/id/$ID"
+}
+
+# Check for previous postponed updates
+
+if [[ -f $log ]]; then
+echo "Previous updates postponed. Checking if 4 days have passed...."
+if [[ $today > $LastDay ]]; then
+	echo "4 Days have passed. OS updates will now be installed"
+	
+	# Check Battery level
+	
+	if (( $bat > 60 )); then
+		echo "Battery Level OK, Continuing Update..."
+	else
+		"$Notify" \
+		-windowType hud \
+		-lockHUD \
+		-title "MacOS Updates" \
+		-heading "Plug in Power" \
+		-description "Battery level is too low.
+
+Please connect to a power supply before continuing." \
+		-icon /System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns \
+		-button1 "Continue"
+	fi
+	
+	# Check Free Disk space
+	
+	until (( $freeSpace >= 15000 )); do
+		"$Notify" \
+		-windowType hud \
+		-lockHUD \
+		-title "MacOS Updates" \
+		-heading "Free up Disk space" \
+		-description "Free disk space is critically low.
+
+Please free up at least 15gb of disk space before continuing." \
+		-icon /System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns \
+		-button1 "Continue"
+	done
+	
+	echo "Enough free space, Continuing Update..."
+	
+	"$Notify" \
+	-windowType hud \
+	-lockHUD \
+	-title "MacOS Updates" \
+	-heading "MacOS Updates available." \
+	-description "There are MacOS updates waiting to be installed.
+	
+	4 Days have passed since you first postponed the OS updates and they will now be installed after 4 hours.
+	
+	If you require any assistance - please don’t hesitate to raise an IT support ticket.
+	
+	Thank you, IT Support" \
+	-icon /System/Library/PreferencePanes/SoftwareUpdate.prefPane/Contents/Resources/SoftwareUpdate.icns \
+	-iconSize 150 \
+	-button1 "Install Now" \
+	-defaultButton 1 \
+	-countdown \
+	-timeout 14400 \
+	
+	rm -f $log
+
+	"$Notify" \
+	-windowType hud \
+	-lockHUD \
+	-title "MacOS Updates" \
+	-heading "MacOS Update installing" \
+	-description "MacOS updates are now being installed.
+
+This process can take 20-40min so please do not turn off your device during this time.
+
+Your device will reboot by itself once completed." \
+	-icon /System/Library/PreferencePanes/SoftwareUpdate.prefPane/Contents/Resources/SoftwareUpdate.icns &
+
+	if [[ $processor == arm64 ]]; then
+		echo "Mac is M1"
+		M1softwareupdate
+	else
+		echo "Mac is Intel"
+		sudo softwareupdate -i -r --restart --agree-to-licence
+	fi
+	
+	exit 0
+
+else
+	echo "User still has time."
+fi
+else
+echo "No previous postponed updates. Continuing...."
+fi
+
+# Message to notify the user 
+
+message=$("$Notify" \
+-windowType hud \
+-lockHUD \
+-title "MacOS Updates" \
+-heading "MacOS Updates available." \
+-description "There are MacOS updates waiting to be installed.
+
+This update will require a reboot so please save any work you have open to prevent any loss of data.
+
+Please click 'Install now' to run the update or leave this window open to automatically install after 5hours. If you click 'Postpone' the update will be scheduled to try again later.
+
+If you require any assistance - please don’t hesitate to raise an IT support ticket.
+
+Thank you, IT Support" \
+-icon /System/Library/PreferencePanes/SoftwareUpdate.prefPane/Contents/Resources/SoftwareUpdate.icns \
+-iconSize 150 \
+-button1 "Install now" \
+-button2 "Postpone" \
+-defaultButton 1 \
+)
+
+if [[ $message == 0 ]]; then
+	echo "User agreed to install the MacOS update"
+	rm -f $log
+else
+	echo "User postponed the MacOS update: Date YYMMDD $today" >> $log
+	echo "User postponed the MacOS update: Date YYMMDD $today"
+	exit 0
+fi
+
+# Check Battery level
+
+if (( $bat > 60 )); then
+	echo "Battery Level OK, Continuing Update..."
+	else
+	"$Notify" \
+	-windowType hud \
+	-lockHUD \
+	-title "MacOS Updates" \
+	-heading "Plug in Power" \
+	-description "Battery level is too low.
+
+Please connect to a power supply before continuing." \
+	-icon /System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns \
+	-button1 "Continue"
+fi
+	
+# Check Free Disk space
+	
+until (( $freeSpace >= 15000 )); do
+		"$Notify" \
+		-windowType hud \
+		-lockHUD \
+		-title "MacOS Updates" \
+		-heading "Free up Disk space" \
+		-description "Free disk space is critically low.
+
+Please free up at least 15gb of disk space before continuing." \
+	-icon /System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns \
+	-button1 "Continue"
+done
+	
+echo "Enough free space, Continuing Update..."
+
+# Run software update
+
+"$Notify" \
+-windowType hud \
+-lockHUD \
+-title "MacOS Updates" \
+-heading "MacOS Update installing" \
+-description "MacOS updates are now being installed.
+
+This process can take 20-40min so please do not turn off your device during this time.
+
+Your device will reboot by itself once completed." \
+-icon /System/Library/PreferencePanes/SoftwareUpdate.prefPane/Contents/Resources/SoftwareUpdate.icns &
+
+if [[ $processor == arm64 ]]; then
+	echo "Mac is M1"
+	M1softwareupdate
+else
+	echo "Mac is Intel"
+	sudo softwareupdate -i -r --restart --agree-to-licence
+fi
+
+exit 0
