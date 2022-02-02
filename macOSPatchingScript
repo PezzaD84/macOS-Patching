@@ -177,6 +177,8 @@ fi
 # Check Free Disk space
 	
 until [ $freespace -ge $spaceneeded ]; do
+freespace=$(df -h -m | grep -m 1 /System/Volumes/Data | awk '{print $4}')
+spaceneeded=15000
 	"$Notify" \
 	-windowType hud \
 	-lockHUD \
