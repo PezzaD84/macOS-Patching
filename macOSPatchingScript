@@ -12,7 +12,9 @@ Notify=/Library/Application\ Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamf
 
 bat=$(pmset -g batt | grep 'InternalBattery' | awk '{print $3}' | tr -d '%'';')
 
-freeSpace=$(df -h -m | grep 'disk1s1' | awk '{print $4}')
+freespace=$(df -h -m | grep -m 1 /System/Volumes/Data | awk '{print $4}')
+
+spaceneeded=15000
 
 log=/Library/Logs/macOSPatchingscript.log
 
@@ -174,14 +176,13 @@ fi
 	
 # Check Free Disk space
 	
-until (( $freeSpace >= 15000 )); do
-		"$Notify" \
-		-windowType hud \
-		-lockHUD \
-		-title "MacOS Updates" \
-		-heading "Free up Disk space" \
-		-description "Free disk space is critically low.
-
+until [ $freespace -ge $spaceneeded ]; do
+	"$Notify" \
+	-windowType hud \
+	-lockHUD \
+	-title "MacOS Updates" \
+	-heading "Free up Disk space" \
+	-description "Free disk space is critically low.
 Please free up at least 15gb of disk space before continuing." \
 	-icon /System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/AlertStopIcon.icns \
 	-button1 "Continue"
