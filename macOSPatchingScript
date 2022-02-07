@@ -61,6 +61,8 @@ Please connect to a power supply before continuing." \
 	# Check Free Disk space
 	
 	until (( $freeSpace >= 15000 )); do
+	freespace=$(df -h -m | grep -m 1 /System/Volumes/Data | awk '{print $4}')
+	spaceneeded=15000
 		"$Notify" \
 		-windowType hud \
 		-lockHUD \
